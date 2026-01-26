@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>My Location</title>
+  <title>Medaram Jathara – Stage 2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet CSS -->
@@ -11,8 +11,14 @@
   />
 
   <style>
-    body { margin: 0; }
-    #map { height: 100vh; width: 100%; }
+    body {
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      width: 100vw;
+      height: 100vh;
+    }
   </style>
 </head>
 <body>
@@ -23,27 +29,43 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+  // 🔴 MEDARAM BOUNDARY (temporary demo polygon)
+  const medaramBoundary = [
+    [18.2150, 80.4300],
+    [18.2150, 80.4600],
+    [18.1900, 80.4600],
+    [18.1900, 80.4300]
+  ];
+
+  // 📍 Get user location
   navigator.geolocation.getCurrentPosition(
-    function(position) {
+    function (position) {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
 
-      // Initialize map
-      const map = L.map('map').setView([lat, lng], 16);
+      // Create map
+      const map = L.map("map").setView([lat, lng], 16);
 
       // OpenStreetMap tiles (NO API KEY)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
+        attribution: "© OpenStreetMap contributors"
       }).addTo(map);
 
-      // Marker
+      // User marker
       L.marker([lat, lng])
         .addTo(map)
         .bindPopup("You are here")
         .openPopup();
+
+      // Draw Medaram boundary
+      L.polygon(medaramBoundary, {
+        color: "red",
+        weight: 2,
+        fillOpacity: 0.05
+      }).addTo(map);
     },
-    function() {
+    function () {
       alert("Please allow location access");
     }
   );
