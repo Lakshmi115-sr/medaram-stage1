@@ -31,36 +31,19 @@
       border-radius: 6px;
       z-index: 999;
     }
-    #testToggle {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      background: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 14px;
-      z-index: 999;
-      box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    }
   </style>
 </head>
 
 <body>
 
 <div id="map"></div>
-
-<div id="testToggle">
-  <input type="checkbox" id="testMode">
-  <label for="testMode">Test Mode (Demo Only)</label>
-</div>
-
 <button id="sendBtn">SEND LOCATION VIA WHATSAPP</button>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 /* =========================
-   MEDARAM BOUNDARY (STAGE 2)
+   MEDARAM BOUNDARY
    ========================= */
 
 const medaramBoundary = [
@@ -106,7 +89,7 @@ function pointInPolygon(pt, poly) {
 }
 
 /* =========================
-   GRID LOGIC (ZONES & SUBZONES)
+   GRID LOGIC
    ========================= */
 
 function createGrid(bounds, rows, cols, prefix) {
@@ -137,15 +120,8 @@ function createGrid(bounds, rows, cols, prefix) {
 
 navigator.geolocation.getCurrentPosition(pos => {
 
-  let lat = pos.coords.latitude;
-  let lng = pos.coords.longitude;
-
-  // ---------- TEST MODE (ADDITION ONLY) ----------
-  if (document.getElementById("testMode").checked) {
-    lat = 18.3200;
-    lng = 80.2300;
-  }
-  // -----------------------------------------------
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
 
   const map = L.map('map').setView([lat, lng], 15);
 
@@ -194,11 +170,6 @@ navigator.geolocation.getCurrentPosition(pos => {
     ? "Inside Medaram Area"
     : "Outside Medaram Area";
 
-  L.popup()
-    .setLatLng([lat,lng])
-    .setContent(`<b>${statusText}<br>${userZone} ${userSubzone}</b>`)
-    .openOn(map);
-
   document.getElementById("sendBtn").onclick = () => {
     const gmap = `https://www.google.com/maps?q=${lat},${lng}`;
     const dir = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
@@ -219,7 +190,6 @@ ${dir}
 Live GPS Location:
 ${gmap}
 
-${document.getElementById("testMode").checked ? "[TEST MODE – DEMO ONLY]\n" : ""}
 Sent via Medaram Safety App`;
 
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
