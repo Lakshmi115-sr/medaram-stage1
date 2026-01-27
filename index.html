@@ -115,13 +115,45 @@ function createGrid(bounds, rows, cols, prefix) {
 }
 
 /* =========================
+   LANDMARK (AUTOMATIC)
+   ========================= */
+
+async function getNearestLandmark(lat, lng) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
+    const res = await fetch(url, {
+      headers: { "Accept": "application/json" }
+    });
+    const data = await res.json();
+
+    if (data.name) return data.name;
+    if (data.address) {
+      return (
+        data.address.attraction ||
+        data.address.amenity ||
+        data.address.place ||
+        data.address.road ||
+        data.address.village ||
+        data.address.hamlet ||
+        "Forest Area"
+      );
+    }
+    return "Forest Area";
+  } catch {
+    return "Forest Area";
+  }
+}
+
+/* =========================
    GPS + MAP
    ========================= */
 
-navigator.geolocation.getCurrentPosition(pos => {
+navigator.geolocation.getCurrentPosition(async pos => {
 
   const lat = pos.coords.latitude;
   const lng = pos.coords.longitude;
+
+  const landmarkName = await getNearestLandmark(lat, lng);
 
   const map = L.map('map').setView([lat, lng], 15);
 
@@ -153,10 +185,8 @@ navigator.geolocation.getCurrentPosition(pos => {
     zones.forEach(z=>{
       if(pointInPolygon([lat,lng],z.polygon)){
         userZone = z.name;
-
         const subBounds = getBounds(z.polygon);
         const subzones = createGrid(subBounds,4,4,"SUBZONE");
-
         subzones.forEach(sz=>{
           if(pointInPolygon([lat,lng],sz.polygon)){
             userSubzone = sz.name;
@@ -170,6 +200,15 @@ navigator.geolocation.getCurrentPosition(pos => {
     ? "Inside Medaram Area"
     : "Outside Medaram Area";
 
+  L.popup()
+    .setLatLng([lat,lng])
+    .setContent(
+      `<b>${statusText}</b><br>
+       ${userZone} – ${userSubzone}<br>
+       Near : ${landmarkName}`
+    )
+    .openOn(map);
+
   document.getElementById("sendBtn").onclick = () => {
     const gmap = `https://www.google.com/maps?q=${lat},${lng}`;
     const dir = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
@@ -180,6 +219,7 @@ navigator.geolocation.getCurrentPosition(pos => {
 Status  : ${statusText}
 Zone    : ${userZone}
 Subzone : ${userSubzone}
+Near    : ${landmarkName}
 
 Open Zone Map:
 https://medaram-stage1.vercel.app
