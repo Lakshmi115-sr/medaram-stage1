@@ -2,20 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Medaram Jathara Safety Map</title>
+  <title>Medaram Jathara Safety App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
+    html, body {
       height: 100%;
+      margin: 0;
       font-family: Arial, sans-serif;
     }
     #map {
@@ -31,7 +26,7 @@
       font-size: 16px;
       font-weight: bold;
       background: #25D366;
-      color: #fff;
+      color: white;
       border: none;
       border-radius: 6px;
       z-index: 999;
@@ -42,53 +37,31 @@
 <body>
 
 <div id="map"></div>
-
 <button id="sendBtn">SEND LOCATION VIA WHATSAPP</button>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 /* =========================
-   STAGE 2 : MEDARAM BOUNDARY
+   MEDARAM BOUNDARY (STAGE 2)
    ========================= */
 
 const medaramBoundary = [
-  [18.3082719, 80.2423282],
-  [18.3082023, 80.2439178],
-  [18.3088135, 80.2458704],
-  [18.3096283, 80.2475656],
-  [18.3107895, 80.2484239],
-  [18.3127354, 80.2488194],
-  [18.3140187, 80.2494202],
-  [18.3168697, 80.2494201],
-  [18.3182549, 80.2507075],
-  [18.3224919, 80.25148],
-  [18.3272991, 80.2492484],
-  [18.3342245, 80.2523383],
-  [18.3347133, 80.2458152],
-  [18.3391943, 80.2380904],
-  [18.3412311, 80.2337989],
-  [18.3402535, 80.2234992],
-  [18.3413126, 80.2142295],
-  [18.3376464, 80.2082213],
-  [18.3352022, 80.2061614],
-  [18.3316988, 80.2091655],
-  [18.3248535, 80.2131887],
-  [18.3207795, 80.2179952],
-  [18.3194758, 80.2213426],
-  [18.3178462, 80.2270933],
-  [18.3165425, 80.2309128],
-  [18.3147499, 80.2331444],
-  [18.3134462, 80.2354189],
-  [18.3116942, 80.2382942],
-  [18.3106757, 80.2391096],
-  [18.3091886, 80.2402898],
-  [18.3082719, 80.2423282]
+  [18.3082719,80.2423282],[18.3082023,80.2439178],[18.3088135,80.2458704],
+  [18.3096283,80.2475656],[18.3107895,80.2484239],[18.3127354,80.2488194],
+  [18.3140187,80.2494202],[18.3168697,80.2494201],[18.3182549,80.2507075],
+  [18.3224919,80.25148],[18.3272991,80.2492484],[18.3342245,80.2523383],
+  [18.3347133,80.2458152],[18.3391943,80.2380904],[18.3412311,80.2337989],
+  [18.3402535,80.2234992],[18.3413126,80.2142295],[18.3376464,80.2082213],
+  [18.3352022,80.2061614],[18.3316988,80.2091655],[18.3248535,80.2131887],
+  [18.3207795,80.2179952],[18.3194758,80.2213426],[18.3178462,80.2270933],
+  [18.3165425,80.2309128],[18.3147499,80.2331444],[18.3134462,80.2354189],
+  [18.3116942,80.2382942],[18.3106757,80.2391096],[18.3091886,80.2402898],
+  [18.3082719,80.2423282]
 ];
 
 /* =========================
-   STAGE 3 : ZONE LOGIC
+   HELPERS
    ========================= */
 
 function getBounds(coords) {
@@ -102,112 +75,119 @@ function getBounds(coords) {
   };
 }
 
-function createZones(bounds) {
-  const zones = [];
-  const rows = 4, cols = 4;
+function pointInPolygon(pt, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1];
+    const xj = poly[j][0], yj = poly[j][1];
+    const intersect =
+      ((yi > pt[1]) !== (yj > pt[1])) &&
+      (pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+/* =========================
+   ZONES + SUBZONES
+   ========================= */
+
+function createGrid(bounds, rows, cols, prefix) {
+  const result = [];
   const latStep = (bounds.maxLat - bounds.minLat) / rows;
   const lngStep = (bounds.maxLng - bounds.minLng) / cols;
-
   let n = 1;
+
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      zones.push({
-        name: `ZONE ${String(n++).padStart(2, '0')}`,
+      result.push({
+        name: `${prefix} ${String(n++).padStart(2, '0')}`,
         polygon: [
-          [bounds.minLat + r * latStep, bounds.minLng + c * lngStep],
-          [bounds.minLat + r * latStep, bounds.minLng + (c + 1) * lngStep],
-          [bounds.minLat + (r + 1) * latStep, bounds.minLng + (c + 1) * lngStep],
-          [bounds.minLat + (r + 1) * latStep, bounds.minLng + c * lngStep]
+          [bounds.minLat + r*latStep, bounds.minLng + c*lngStep],
+          [bounds.minLat + r*latStep, bounds.minLng + (c+1)*lngStep],
+          [bounds.minLat + (r+1)*latStep, bounds.minLng + (c+1)*lngStep],
+          [bounds.minLat + (r+1)*latStep, bounds.minLng + c*lngStep]
         ]
       });
     }
   }
-  return zones;
-}
-
-function pointInPolygon(pt, poly) {
-  const [x, y] = pt;
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const [xi, yi] = poly[i];
-    const [xj, yj] = poly[j];
-    const hit =
-      ((yi > y) !== (yj > y)) &&
-      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-    if (hit) inside = !inside;
-  }
-  return inside;
+  return result;
 }
 
 /* =========================
    GPS + MAP
    ========================= */
 
-navigator.geolocation.getCurrentPosition(
-  function(position) {
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
+navigator.geolocation.getCurrentPosition(pos => {
 
-    const map = L.map('map').setView([lat, lng], 15);
+  const lat = pos.coords.latitude;
+  const lng = pos.coords.longitude;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+  const map = L.map('map').setView([lat, lng], 15);
 
-    // User marker
-    L.marker([lat, lng]).addTo(map).bindPopup("You are here").openPopup();
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
 
-    // Medaram boundary
-    const boundaryLayer = L.polygon(medaramBoundary, {
-      color: 'red',
-      weight: 2,
-      fillOpacity: 0.15
-    }).addTo(map);
+  L.marker([lat,lng]).addTo(map).bindPopup("You are here");
 
-    map.fitBounds(boundaryLayer.getBounds());
+  const boundaryLayer = L.polygon(medaramBoundary,{
+    color:'red',weight:2,fillOpacity:0.15
+  }).addTo(map);
 
-    // Create & draw zones
-    const bounds = getBounds(medaramBoundary);
-    const zones = createZones(bounds);
+  map.fitBounds(boundaryLayer.getBounds());
 
-    zones.forEach(z => {
-      L.polygon(z.polygon, {
-        color: 'blue',
-        weight: 1,
-        fillOpacity: 0.05
-      }).addTo(map);
-    });
+  /* MAIN ZONES */
+  const zoneBounds = getBounds(medaramBoundary);
+  const zones = createGrid(zoneBounds,4,4,"ZONE");
 
-    // Detect user zone
-    let userZone = "Outside Medaram Jathara Area";
-    zones.forEach(z => {
-      if (pointInPolygon([lat, lng], z.polygon)) {
-        userZone = z.name;
-      }
-    });
+  zones.forEach(z=>{
+    L.polygon(z.polygon,{color:'blue',weight:1,fillOpacity:0.05}).addTo(map);
+  });
 
-    // Show zone popup
-    L.popup()
-      .setLatLng([lat, lng])
-      .setContent(`<b>${userZone}</b>`)
-      .openOn(map);
+  let userZone = "UNKNOWN";
+  let userSubzone = "UNKNOWN";
 
-    // WhatsApp button
-    document.getElementById('sendBtn').onclick = function () {
-      const msg =
-        `Location Information (Medaram Jathara):\n\n` +
-        `Zone : ${userZone}\n` +
-        `Area : Medaram Jathara\n\n` +
-        `Sent via Medaram Safety Web App`;
+  zones.forEach(z=>{
+    if(pointInPolygon([lat,lng],z.polygon)){
+      userZone = z.name;
 
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
-    };
-  },
-  function() {
-    alert("Location access denied. Please enable GPS.");
-  }
-);
+      const subBounds = getBounds(z.polygon);
+      const subzones = createGrid(subBounds,4,4,"SUBZONE");
+
+      subzones.forEach(sz=>{
+        if(pointInPolygon([lat,lng],sz.polygon)){
+          userSubzone = sz.name;
+        }
+      });
+    }
+  });
+
+  L.popup()
+    .setLatLng([lat,lng])
+    .setContent(`<b>${userZone} – ${userSubzone}</b>`)
+    .openOn(map);
+
+  document.getElementById("sendBtn").onclick = () => {
+    const gmap = `https://www.google.com/maps?q=${lat},${lng}`;
+    const msg =
+`Location Information (Medaram Jathara)
+
+Status  : Inside Medaram Area
+Zone    : ${userZone}
+Subzone : ${userSubzone}
+
+Live GPS Location:
+${gmap}
+
+Sent via Medaram Safety App`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`);
+  };
+
+},
+()=>alert("Please enable GPS"));
+
 </script>
-
 </body>
 </html>
