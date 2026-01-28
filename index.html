@@ -32,7 +32,51 @@
       z-index: 999;
     }
 
-    /* 🔹 ADDED CODE : LABEL STYLE */
+    /* INTRO SCREEN */
+    #introScreen {
+      position: fixed;
+      inset: 0;
+      background: url('intro.jpg') center/cover no-repeat;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #introOverlay {
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      text-align: center;
+      padding: 24px;
+      max-width: 720px;
+      margin: 16px;
+      border-radius: 12px;
+    }
+    #introOverlay h1 {
+      font-size: 26px;
+      margin-bottom: 14px;
+    }
+    #introOverlay p {
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+    #introOverlay .footer {
+      font-style: italic;
+      margin-top: 14px;
+      font-size: 14px;
+    }
+    #enterBtn {
+      margin-top: 18px;
+      padding: 12px 22px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      background: #ff9800;
+      color: #000;
+      cursor: pointer;
+    }
+
     .zone-label {
       font-size: 14px;
       font-weight: bold;
@@ -58,10 +102,77 @@
 
 <body>
 
+<div id="introScreen">
+  <div id="introOverlay">
+    <h1>Welcome to Medaram Jathara Safety App</h1>
+
+    <p>
+      During Jathara rush, directions can be confusing.<br>
+      This app shows your <b>Zone, Subzone, and nearest landmark</b><br>
+      so you can <b>share your location in one tap via WhatsApp</b>.
+    </p>
+
+    <hr style="opacity:0.3">
+
+    <p>
+      <b>మెదారం జాతర భద్రతా యాప్‌కు స్వాగతం</b><br>
+      జాతర రద్దీలో దారులు గందరగోళంగా ఉంటాయి.<br>
+      ఈ యాప్ మీ <b>జోన్, సబ్‌జోన్, సమీప ల్యాండ్‌మార్క్</b> చూపిస్తుంది<br>
+      తద్వారా మీ స్థలాన్ని <b>ఒక ట్యాప్‌లో WhatsApp ద్వారా పంచుకోవచ్చు</b>.
+    </p>
+
+    <div class="footer">
+      Stay safe and stay connected<br>
+      సురక్షితంగా ఉండండి – కనెక్ట్‌గా ఉండండి
+    </div>
+
+    <button id="enterBtn">Enter Map</button>
+  </div>
+</div>
+
 <div id="map"></div>
 <button id="sendBtn">SEND LOCATION VIA WHATSAPP</button>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+function playIntroVoice() {
+  if (!('speechSynthesis' in window)) return;
+
+  const telugu =
+    "మెదారం జాతర భద్రతా యాప్‌కు స్వాగతం. " +
+    "ఈ యాప్ ద్వారా మీరు మీ జోన్, సబ్‌జోన్, సమీప ల్యాండ్‌మార్క్ తెలుసుకోవచ్చు. " +
+    "అవసరమైనప్పుడు మీ స్థలాన్ని సులభంగా పంచుకోవచ్చు. " +
+    "సురక్షితంగా ఉండండి. కనెక్ట్‌గా ఉండండి.";
+
+  const english =
+    "Welcome to Medaram Jathara Safety App. " +
+    "This app helps you know your zone, subzone, and nearest landmark, " +
+    "so you can share your location easily. " +
+    "Stay safe and stay connected.";
+
+  const te = new SpeechSynthesisUtterance(telugu);
+  te.lang = "te-IN";
+  te.rate = 0.9;
+  te.volume = 0.8;
+
+  const en = new SpeechSynthesisUtterance(english);
+  en.lang = "en-IN";
+  en.rate = 0.9;
+  en.volume = 0.8;
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(te);
+  te.onend = () => speechSynthesis.speak(en);
+}
+
+setTimeout(playIntroVoice, 800);
+
+document.getElementById("enterBtn").onclick = () => {
+  document.getElementById("introScreen").style.display = "none";
+  speechSynthesis.cancel();
+};
+</script>
 
 <script>
 /* =========================
@@ -81,10 +192,6 @@ const medaramBoundary = [
   [18.3116942,80.2382942],[18.3106757,80.2391096],[18.3091886,80.2402898],
   [18.3082719,80.2423282]
 ];
-
-/* =========================
-   HELPERS
-   ========================= */
 
 function getBounds(coords) {
   const lats = coords.map(p => p[0]);
@@ -110,10 +217,6 @@ function pointInPolygon(pt, poly) {
   return inside;
 }
 
-/* =========================
-   GRID LOGIC
-   ========================= */
-
 function createGrid(bounds, rows, cols, prefix) {
   const result = [];
   const latStep = (bounds.maxLat - bounds.minLat) / rows;
@@ -136,14 +239,10 @@ function createGrid(bounds, rows, cols, prefix) {
   return result;
 }
 
-/* =========================
-   LANDMARK (AUTOMATIC)
-   ========================= */
-
 async function getNearestLandmark(lat, lng) {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    const res = await fetch(url);
     const data = await res.json();
     if (data.name) return data.name;
     if (data.address) {
@@ -162,10 +261,6 @@ async function getNearestLandmark(lat, lng) {
     return "Forest Area";
   }
 }
-
-/* =========================
-   GPS + MAP
-   ========================= */
 
 navigator.geolocation.getCurrentPosition(async pos => {
 
@@ -193,40 +288,28 @@ navigator.geolocation.getCurrentPosition(async pos => {
   const zoneBounds = getBounds(medaramBoundary);
   const zones = createGrid(zoneBounds,4,4,"ZONE");
 
-  /* 🔹 ADDED CODE : LABEL LAYERS */
   const zoneLabelLayer = L.layerGroup().addTo(map);
   const subzoneLabelLayer = L.layerGroup().addTo(map);
 
   zones.forEach(z=>{
     L.polygon(z.polygon,{color:'blue',weight:1,fillOpacity:0.05}).addTo(map);
 
-    // 🔹 ZONE LABEL (ALWAYS VISIBLE)
     const zb = getBounds(z.polygon);
     const zCenter = [(zb.minLat+zb.maxLat)/2,(zb.minLng+zb.maxLng)/2];
     L.marker(zCenter,{
-      icon: L.divIcon({
-        className:'zone-label',
-        html:z.name
-      })
+      icon: L.divIcon({className:'zone-label',html:z.name})
     }).addTo(zoneLabelLayer);
 
-    // 🔹 SUBZONE LABELS (ZOOM BASED)
-    const subBounds = getBounds(z.polygon);
-    const subzones = createGrid(subBounds,4,4,"SUBZONE");
-
+    const subzones = createGrid(getBounds(z.polygon),4,4,"SUBZONE");
     subzones.forEach(sz=>{
       const sb = getBounds(sz.polygon);
       const sCenter = [(sb.minLat+sb.maxLat)/2,(sb.minLng+sb.maxLng)/2];
       L.marker(sCenter,{
-        icon: L.divIcon({
-          className:'subzone-label',
-          html:sz.name
-        })
+        icon: L.divIcon({className:'subzone-label',html:sz.name})
       }).addTo(subzoneLabelLayer);
     });
   });
 
-  // 🔹 SHOW / HIDE SUBZONES BASED ON ZOOM
   function toggleSubzones(){
     if(map.getZoom() >= 17){
       map.addLayer(subzoneLabelLayer);
@@ -244,8 +327,7 @@ navigator.geolocation.getCurrentPosition(async pos => {
     zones.forEach(z=>{
       if(pointInPolygon([lat,lng],z.polygon)){
         userZone = z.name;
-        const subBounds = getBounds(z.polygon);
-        const subzones = createGrid(subBounds,4,4,"SUBZONE");
+        const subzones = createGrid(getBounds(z.polygon),4,4,"SUBZONE");
         subzones.forEach(sz=>{
           if(pointInPolygon([lat,lng],sz.polygon)){
             userSubzone = sz.name;
@@ -255,9 +337,7 @@ navigator.geolocation.getCurrentPosition(async pos => {
     });
   }
 
-  const statusText = insideMedaram
-    ? "Inside Medaram Area"
-    : "Outside Medaram Area";
+  const statusText = insideMedaram ? "Inside Medaram Area" : "Outside Medaram Area";
 
   L.popup()
     .setLatLng([lat,lng])
@@ -296,7 +376,7 @@ Sent via Medaram Safety App`;
 
 },
 ()=>alert("Please enable GPS"));
-
 </script>
+
 </body>
 </html>
