@@ -31,6 +31,28 @@
       border-radius: 6px;
       z-index: 999;
     }
+
+    /* 🔹 ADDED CODE : LABEL STYLE */
+    .zone-label {
+      font-size: 14px;
+      font-weight: bold;
+      color: blue;
+      background: rgba(255,255,255,0.8);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid blue;
+      white-space: nowrap;
+    }
+    .subzone-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: green;
+      background: rgba(255,255,255,0.85);
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid green;
+      white-space: nowrap;
+    }
   </style>
 </head>
 
@@ -121,11 +143,8 @@ function createGrid(bounds, rows, cols, prefix) {
 async function getNearestLandmark(lat, lng) {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
-    const res = await fetch(url, {
-      headers: { "Accept": "application/json" }
-    });
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
     const data = await res.json();
-
     if (data.name) return data.name;
     if (data.address) {
       return (
@@ -174,9 +193,49 @@ navigator.geolocation.getCurrentPosition(async pos => {
   const zoneBounds = getBounds(medaramBoundary);
   const zones = createGrid(zoneBounds,4,4,"ZONE");
 
+  /* 🔹 ADDED CODE : LABEL LAYERS */
+  const zoneLabelLayer = L.layerGroup().addTo(map);
+  const subzoneLabelLayer = L.layerGroup().addTo(map);
+
   zones.forEach(z=>{
     L.polygon(z.polygon,{color:'blue',weight:1,fillOpacity:0.05}).addTo(map);
+
+    // 🔹 ZONE LABEL (ALWAYS VISIBLE)
+    const zb = getBounds(z.polygon);
+    const zCenter = [(zb.minLat+zb.maxLat)/2,(zb.minLng+zb.maxLng)/2];
+    L.marker(zCenter,{
+      icon: L.divIcon({
+        className:'zone-label',
+        html:z.name
+      })
+    }).addTo(zoneLabelLayer);
+
+    // 🔹 SUBZONE LABELS (ZOOM BASED)
+    const subBounds = getBounds(z.polygon);
+    const subzones = createGrid(subBounds,4,4,"SUBZONE");
+
+    subzones.forEach(sz=>{
+      const sb = getBounds(sz.polygon);
+      const sCenter = [(sb.minLat+sb.maxLat)/2,(sb.minLng+sb.maxLng)/2];
+      L.marker(sCenter,{
+        icon: L.divIcon({
+          className:'subzone-label',
+          html:sz.name
+        })
+      }).addTo(subzoneLabelLayer);
+    });
   });
+
+  // 🔹 SHOW / HIDE SUBZONES BASED ON ZOOM
+  function toggleSubzones(){
+    if(map.getZoom() >= 17){
+      map.addLayer(subzoneLabelLayer);
+    } else {
+      map.removeLayer(subzoneLabelLayer);
+    }
+  }
+  map.on('zoomend', toggleSubzones);
+  toggleSubzones();
 
   let userZone = "N/A";
   let userSubzone = "N/A";
